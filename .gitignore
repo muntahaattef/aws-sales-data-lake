@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+*.egg-info/
+lake/raw/*.csv
+lake/curated/
+lake/rejected/
+!lake/raw/.gitkeep
+

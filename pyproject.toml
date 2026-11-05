@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aws-sales-data-lake"
+version = "0.1.0"
+description = "Local sales lake transformation with optional S3 and Athena integration"
+requires-python = ">=3.11"
+dependencies = ["pandas>=2.2,<3", "pyarrow>=18,<23", "boto3>=1.35,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "pytest-cov>=6,<7"]
+
+[project.scripts]
+generate-lake-data = "sales_lake.generator:main"
+transform-sales-lake = "sales_lake.transform:main"
+upload-sales-lake = "sales_lake.s3_upload:main"
+run-athena-query = "sales_lake.athena:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
