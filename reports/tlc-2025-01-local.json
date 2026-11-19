@@ -1,0 +1,7 @@
+{
+  "source_rows": 3475226,
+  "accepted_rows": 3473153,
+  "rejected_rows": 2073,
+  "release_month": "2025-01",
+  "source": "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-01.parquet"
+}
