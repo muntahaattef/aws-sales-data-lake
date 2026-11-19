@@ -119,3 +119,25 @@ Drop the Athena table and database separately if no longer needed. These command
 3. **Why use Parquet instead of CSV for curated data?** Parquet preserves types, compresses columns, and lets Athena read only referenced columns.
 4. **Why is S3 not a database?** It is object storage; schema, SQL execution, transactions, and integrity guarantees must come from other services or application logic.
 5. **How would production deduplication improve?** Record processed-file checksums and transaction keys in a durable catalog or transactional table and make partition publication atomic.
+
+## NYC yellow taxi ingestion
+
+The [NYC Taxi and Limousine Commission](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) publishes monthly yellow taxi trip Parquet files. This loader validates them in batches and writes separate raw, curated, and rejected objects by release month. The [January 2025 run](reports/tlc-2025-01-local.json) reconciled **3,475,226 source rows**, **3,473,153 accepted**, and **2,073 rejected**.
+
+```bash
+python -m pip install .
+python scripts/tlc_ingest.py --month 2025-01-01
+python scripts/tlc_ingest.py --month 2025-01-01 --through 2025-03-01
+```
+
+The last command backfills January through March inclusive. Manual GitHub Actions runs accept the same range and retain JSON metrics as an artifact.
+
+### Schedule and AWS verification
+
+1. Apply [the taxi table DDL](athena/tlc_ddl.sql) in Athena after replacing `BUCKET` and `TLC_PREFIX`. Use a private bucket and a dedicated query-results prefix.
+2. Configure a GitHub Actions OIDC role trusted only for this repository's default branch. Grant object read and write on the taxi and Athena result prefixes, bucket list scoped to the completion-report prefix, Athena query access for the selected workgroup, and Glue read access for `tlc_lake.yellow_trips`. Apply the DDL separately with a principal that can create the database and table.
+3. Set repository variables `TLC_AWS_ROLE_ARN`, `TLC_AWS_REGION`, `TLC_BUCKET`, and `TLC_ATHENA_RESULTS` (an `s3://` URI). Optionally set `TLC_PREFIX` and `TLC_ATHENA_WORKGROUP` to change the defaults `tlc-yellow` and `primary`.
+
+The weekly schedule runs when the AWS role is configured. It checks release months three through five months back and skips months with a successful S3 completion report. Use a manual range for older releases. Athena must count the same number of accepted trips before the loader writes `runs/YYYY-MM.json`, which records the query ID and bytes scanned. AWS verification remains pending for the checked-in sample.
+
+Replay a failed month through a manual run with the same month and publishing enabled. The same object keys are overwritten, and Athena verification must pass before the loader writes the completion report. A failed upload can leave partially published objects visible until replay succeeds. To replay a completed month after an upstream correction, remove its completion report before rerunning.
